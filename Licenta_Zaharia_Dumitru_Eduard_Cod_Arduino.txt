@@ -1,0 +1,244 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <DHT.h>
+
+#define DHTPIN 13
+#define DHTTYPE DHT22    // Specificăm tipul de senzor; poate fi DHT11 sau DHT22
+DHT dht(DHTPIN, DHTTYPE);
+const int pinMQ135 = A0;
+const int pinBuzzer = A1;
+
+// Specifici dimensiunea fontului ca 2x16, deci 2 randuri si 16 coloane
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+const int pinA = 9;
+const int pinB = 10;
+const int pinC = 11;
+const int pinD = 12;
+const int pinE = A2;
+const int pinF = A3;
+const int pinG = 5;
+const int pinD1 = A5; // D1 pe A5
+const int pinD2 = A4;  // D2 pe pinul digital 4
+const int pinD3 = 4;  // D3 pe pinul digital 5
+const int pinD4 = 8;  // D4 pe pinul digital 8
+
+const int row1 = 2;
+const int row2 = 3;
+const int col1 = 6;
+const int col2 = 7;
+
+const byte cifre[] = {
+  B11000000, // 0 .GFEDCBA
+  B11111001, // 1 .GFEDCBA
+  B10100100, // 2 .GFEDCBA
+  B10110000, // 3 .GFEDCBA
+  B10011001, // 4 .GFEDCBA
+  B10010010, // 5 .GFEDCBA
+  B10000010, // 6 .GFEDCBA
+  B11111000, // 7 .GFEDCBA
+  B10000000, // 8 .GFEDCBA
+};
+
+int cifreAfisate[4] = {-1, -1, -1, -1};
+int numarCifre = 0;
+unsigned long previousMillis = 0;
+const long interval = 5;  // Intervalul pentru multiplexare
+int numar_de_trimis = 0;
+unsigned long lastDebounceTime = 0;
+const long debounceDelay = 500; // Pauză de 200ms pentru debounce
+
+void setup() {
+  pinMode(pinA, OUTPUT);
+  pinMode(pinB, OUTPUT);
+  pinMode(pinC, OUTPUT);
+  pinMode(pinD, OUTPUT);
+  pinMode(pinE, OUTPUT);
+  pinMode(pinF, OUTPUT);
+  pinMode(pinG, OUTPUT);
+  pinMode(pinD1, OUTPUT);
+  pinMode(pinD2, OUTPUT);
+  pinMode(pinD3, OUTPUT);
+  pinMode(pinD4, OUTPUT);
+
+  pinMode(row1, INPUT_PULLUP);
+  pinMode(row2, INPUT_PULLUP);
+  pinMode(col1, OUTPUT);
+  pinMode(col2, OUTPUT);
+
+  digitalWrite(pinD1, HIGH);
+  digitalWrite(pinD2, HIGH);
+  digitalWrite(pinD3, HIGH);
+  digitalWrite(pinD4, HIGH);
+
+  digitalWrite(col1, HIGH);
+  digitalWrite(col2, HIGH);
+
+  pinMode(pinBuzzer, OUTPUT);
+  Serial.begin(9600);
+  lcd.begin();    // Inițializăm LCD-ul fără a specifica dimensiunile
+  dht.begin();    // Inițializăm senzorul de temperatură
+}
+
+void loop() {
+  unsigned long currentMillis = millis();
+  
+  // Citirea și afișarea datelor de la DHT la fiecare 2 secunde
+  if (currentMillis - previousMillis >= 2000) {
+    previousMillis = currentMillis;
+    citireSiAfisareDHT();
+  }
+
+  // Verificăm comanda de la portul serial pentru controlul buzzer-ului
+  if (Serial.available() > 0) {
+    char command = Serial.read();
+    if (command == '1') {
+      digitalWrite(pinBuzzer, HIGH);
+      delay(1000);
+      digitalWrite(pinBuzzer, LOW);
+      delay(1000);
+    } else if (command == '0') {
+      digitalWrite(pinBuzzer, LOW);
+    }
+  }
+
+  // Citirea tastaturii și afișarea cifrelor pe display-ul cu 7 segmente
+  if (currentMillis - lastDebounceTime > debounceDelay) {
+    int cifra = citesteTastatura();
+    if (cifra != -1) {
+      shiftCifre(cifra);
+      numarCifre++;
+      numar_de_trimis = 10 * numar_de_trimis + cifra;
+      lastDebounceTime = currentMillis;
+      delay(200);
+      if (numarCifre == 3) {
+        numar_de_trimis=numar_de_trimis/10;
+        Serial.print(numar_de_trimis);
+        Serial.print(",");
+        numarCifre = 0;
+        numar_de_trimis = 0;
+        resetCifre();
+      }
+    }
+  }
+
+  // Afișarea cifrelor pe display-ul cu 7 segmente
+  afisareCifrePeDisplay();
+  delay(5);
+}
+
+void citireSiAfisareDHT() {
+  float temperatura = dht.readTemperature();
+  float umiditate = dht.readHumidity();
+
+  if (isnan(temperatura) || isnan(umiditate)) {
+    Serial.println("Eroare la citirea temperaturii/umidității!");
+    return;
+  }
+
+  lcd.clear();
+
+  // Afișăm temperatura
+  lcd.setCursor(0, 0);
+  lcd.print("Temp:");
+  lcd.setCursor(7, 0);
+  lcd.print(temperatura, 1);
+  lcd.print(" C");
+
+  // Afișăm umiditatea
+  lcd.setCursor(0, 1);
+  lcd.print("Umid:");
+  lcd.setCursor(6, 1);
+  lcd.print(umiditate, 1);
+  lcd.print("%");
+
+  //Serial.print("Temperatura: ");
+  Serial.print(temperatura);
+  Serial.print(",");
+  Serial.print(umiditate);
+
+    // Citirea și afișarea valorii de la MQ135
+  int valoareMQ135 = analogRead(pinMQ135);
+  Serial.print(",");
+  Serial.println(valoareMQ135);
+}
+
+int citesteTastatura() {
+  digitalWrite(col1, LOW);
+  digitalWrite(col2, HIGH);
+  if (digitalRead(row1) == LOW) {
+    return 1;
+  }
+  if (digitalRead(row2) == LOW) {
+    return 4;
+  }
+
+  digitalWrite(col1, HIGH);
+  digitalWrite(col2, LOW);
+  if (digitalRead(row1) == LOW) {
+    return 2;
+  }
+  if (digitalRead(row2) == LOW) {
+    return 5;
+  }
+
+  return -1;
+}
+
+void shiftCifre(int cifra) {
+  for (int i = 0; i < 1; i++) {
+    cifreAfisate[i] = cifreAfisate[i + 1];
+  }
+  cifreAfisate[1] = cifra;
+}
+
+void afisareCifrePeDisplay() {
+  for (int digit = 0; digit < 2; digit++) {
+    dezactiveazaDigit();
+    if (cifreAfisate[digit] != -1) {
+      afisareCifraPeDigit(cifre[cifreAfisate[digit]]);
+      activeazaDigit(digit + 1);
+    }
+    delay(interval);
+  }
+}
+
+void afisareCifraPeDigit(byte pattern) {
+  digitalWrite(pinA, !bitRead(pattern, 0));
+  digitalWrite(pinB, !bitRead(pattern, 1));
+  digitalWrite(pinC, !bitRead(pattern, 2));
+  digitalWrite(pinD, !bitRead(pattern, 3));
+  digitalWrite(pinE, !bitRead(pattern, 4));
+  digitalWrite(pinF, !bitRead(pattern, 5));
+  digitalWrite(pinG, !bitRead(pattern, 6));
+}
+
+void activeazaDigit(int digit) {
+  switch (digit) {
+    case 3:
+      digitalWrite(pinD1, LOW);
+      break;
+    case 0:
+      digitalWrite(pinD2, LOW);
+      break;
+    case 1:
+      digitalWrite(pinD3, LOW);
+      break;
+    case 2:
+      digitalWrite(pinD4, LOW);
+      break;
+  }
+}
+
+void dezactiveazaDigit() {
+  digitalWrite(pinD1, HIGH);
+  digitalWrite(pinD2, HIGH);
+  digitalWrite(pinD3, HIGH);
+  digitalWrite(pinD4, HIGH);
+}
+
+void resetCifre() {
+  for (int i = 0; i < 4; i++) {
+    cifreAfisate[i] = -1;
+  }
+}

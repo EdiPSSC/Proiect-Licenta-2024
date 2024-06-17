@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.34601.136
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Incercare_licenta", "Incercare_licenta\Incercare_licenta.csproj", "{DCB3A887-7A6E-47C9-8D39-E05AA4A8AA2C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DCB3A887-7A6E-47C9-8D39-E05AA4A8AA2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCB3A887-7A6E-47C9-8D39-E05AA4A8AA2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCB3A887-7A6E-47C9-8D39-E05AA4A8AA2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCB3A887-7A6E-47C9-8D39-E05AA4A8AA2C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {41D7BDF0-6C70-4172-A5BD-73946EC63164}
+	EndGlobalSection
+EndGlobal
